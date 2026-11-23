@@ -1,6 +1,6 @@
 # Agent Trio
 
-Equipo de tres agentes de IA que recibe una petición sobre una web, la divide en tareas, la implementa y la prueba hasta que todo pasa. El panel muestra en directo qué hace cada agente y en qué estado está cada tarea.
+Equipo de tres agentes de IA que recibe una petición sobre una app Next.js con TypeScript, la divide en tareas, la implementa y la prueba hasta que todo pasa. El panel muestra en directo qué hace cada agente y en qué estado está cada tarea.
 
 ## Cómo funciona
 
@@ -21,13 +21,14 @@ flowchart LR
 | Testing | OpenRouter | `nvidia/nemotron-3.5-super-vl:free` | Revisa el código tras las comprobaciones automáticas |
 | Respaldo | Mistral | `codestral-latest` | Continúa si un proveedor falla o agota su cuota |
 
-Testing combina dos capas. Primero ejecuta comprobaciones deterministas sobre el HTML: archivos, selectores, textos, enlaces rotos, estructura y etiquetas de formulario. Si pasan, un modelo revisa el código. Cada tarea admite hasta tres intentos.
+Testing combina dos capas. Primero compila el proyecto generado con el compilador de TypeScript en modo estricto y analiza su AST: rutas, componentes, textos, enlaces rotos, estructura, dependencias y etiquetas de formulario. Si todo pasa, un modelo revisa el código. Cada tarea admite hasta tres intentos.
 
 ## Decisiones técnicas
 
 - **Motor reanudable:** cada paso de agente es una petición corta que guarda su estado en Neon, compatible con los límites de funciones de Vercel. Un bloqueo con caducidad impide que dos pestañas ejecuten el mismo paso.
 - **Resiliencia:** los errores de cuota o disponibilidad pasan al modelo de respaldo y después se reintentan con espera.
-- **Seguridad:** las claves solo existen en variables de entorno. Lanzar agentes requiere sesión, hay un límite diario y el código generado se muestra en un iframe aislado con CSP, sin acceso a red ni a la aplicación.
+- **Vista previa de Next.js:** los componentes TSX generados se ejecutan en el navegador con un runtime propio que resuelve el App Router, `next/link`, `next/image` y `next/navigation`. Es una simulación ligera para la demo: no ejecuta funciones de servidor ni un build completo de Next.js.
+- **Seguridad:** las claves solo existen en variables de entorno. Lanzar agentes requiere sesión, hay un límite diario y el código generado nunca se ejecuta en el servidor. Se muestra en un iframe aislado con CSP, sin acceso a red ni a la aplicación.
 - **Accesibilidad:** interfaz orientada a WCAG 2.2 AA, con navegación por teclado, foco visible, estados anunciados a lectores de pantalla, objetivos táctiles amplios, modo oscuro y movimiento reducido.
 
 ## Stack

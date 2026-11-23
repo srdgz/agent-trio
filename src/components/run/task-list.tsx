@@ -6,7 +6,7 @@ import type { TaskView } from "@/domain/types";
 export function TaskList({ tasks }: { tasks: TaskView[] }) {
   return (
     <section aria-labelledby="tasks-title">
-      <h2 id="tasks-title" className="text-xl font-semibold">
+      <h2 id="tasks-title" className="text-xl font-medium tracking-tight">
         Tareas
       </h2>
       {tasks.length === 0 ? (
@@ -16,7 +16,7 @@ export function TaskList({ tasks }: { tasks: TaskView[] }) {
           {tasks.map((task) => (
             <li key={task.id} className="card p-4">
               <div className="flex flex-wrap items-start justify-between gap-2">
-                <h3 className="min-w-0 flex-1 basis-48 font-semibold">
+                <h3 className="min-w-0 flex-1 basis-48 font-medium">
                   {task.position + 1}. {task.title}
                 </h3>
                 <StatusBadge {...TASK_STATUS_INFO[task.status]} />
@@ -27,7 +27,7 @@ export function TaskList({ tasks }: { tasks: TaskView[] }) {
               </p>
 
               {task.feedback.length > 0 ? (
-                <div className="mt-3 rounded-lg bg-warning-soft p-3 text-sm text-warning">
+                <div className="mt-3 rounded-2xl bg-warning-soft p-3 text-sm text-warning">
                   <p className="font-semibold">Fallos devueltos por Testing</p>
                   <ul className="mt-1 list-disc space-y-1 pl-5">
                     {task.feedback.map((item) => (

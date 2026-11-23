@@ -58,7 +58,7 @@ for (const viewport of VIEWPORTS) {
       test("authenticated home and run dashboard", async ({ page, context, baseURL }) => {
         await authenticate(context, baseURL!);
         await page.goto("/");
-        await expect(page.getByLabel("¿Qué cambio necesita la web?")).toBeVisible();
+        await expect(page.getByLabel("¿Qué cambio necesita la app?")).toBeVisible();
         await expectAccessible(page);
         await expectNoHorizontalScroll(page);
 
@@ -69,8 +69,8 @@ for (const viewport of VIEWPORTS) {
 
         await page.getByRole("tab", { name: "Vista previa" }).focus();
         await page.keyboard.press("ArrowRight");
-        await expect(page.getByRole("tab", { name: "Archivos" })).toBeFocused();
-        await expect(page.getByRole("tabpanel", { name: "Archivos" })).toBeVisible();
+        await expect(page.getByRole("tab", { name: "Código" })).toBeFocused();
+        await expect(page.getByRole("tabpanel", { name: "Código" })).toBeVisible();
         await expectAccessible(page);
         await expectNoHorizontalScroll(page);
       });
@@ -90,7 +90,27 @@ test("login rejects bad credentials and accepts the test user", async ({ page })
   await page.getByLabel("Contraseña", { exact: true }).fill(process.env.DEMO_PASSWORD ?? "");
   await page.getByRole("button", { name: "Entrar" }).click();
   await expect(page.getByRole("button", { name: "Cerrar sesión" })).toBeVisible();
-  await expect(page.getByLabel("¿Qué cambio necesita la web?")).toBeVisible();
+  await expect(page.getByLabel("¿Qué cambio necesita la app?")).toBeVisible();
+});
+
+test("password visibility is toggled inside the input", async ({ page }) => {
+  await page.goto("/login", { waitUntil: "networkidle" });
+  const input = page.getByLabel("Contraseña", { exact: true });
+  await expect(input).toHaveAttribute("type", "password");
+  await page.getByRole("button", { name: "Mostrar contraseña" }).click();
+  await expect(input).toHaveAttribute("type", "text");
+  await page.getByRole("button", { name: "Ocultar contraseña" }).click();
+  await expect(input).toHaveAttribute("type", "password");
+});
+
+test("preview renders the generated Next.js routes", async ({ page }) => {
+  await page.goto("/", { waitUntil: "networkidle" });
+  await page.locator('a[href^="/runs/"]').first().click();
+  const preview = page.frameLocator('iframe[title^="Vista previa"]');
+  await expect(preview.getByRole("heading", { level: 1 })).toContainText("Carpintería");
+  await preview.getByRole("navigation").getByRole("link", { name: "Servicios" }).click();
+  await expect(page.getByLabel("Ruta")).toHaveValue("/servicios");
+  await expect(page.frameLocator('iframe[title^="Vista previa"]').getByRole("heading", { level: 1 })).toHaveText("Servicios");
 });
 
 test("protected endpoints reject anonymous requests", async ({ request }) => {

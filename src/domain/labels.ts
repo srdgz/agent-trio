@@ -2,21 +2,30 @@ import type { AgentActivity, AgentId, RunStatus, TaskStatus } from "./types";
 
 export type Tone = "neutral" | "accent" | "success" | "warning" | "danger";
 
-export const AGENT_INFO: Record<AgentId, { name: string; provider: string; role: string }> = {
+export const AGENT_INFO: Record<
+  AgentId,
+  { name: string; provider: string; role: string; icon: "route" | "code" | "flask"; avatar: string }
+> = {
   orchestrator: {
     name: "Orquestador",
     provider: "Gemini",
     role: "Divide la petición y reparte las tareas.",
+    icon: "route",
+    avatar: "bg-accent-soft text-on-accent-soft",
   },
   develop: {
     name: "Develop",
     provider: "Groq",
-    role: "Implementa cada tarea en la web.",
+    role: "Implementa cada tarea en Next.js y TypeScript.",
+    icon: "code",
+    avatar: "bg-violet-soft text-violet",
   },
   testing: {
     name: "Testing",
     provider: "OpenRouter",
-    role: "Comprueba el resultado y devuelve los fallos.",
+    role: "Compila, comprueba y devuelve los fallos.",
+    icon: "flask",
+    avatar: "bg-success-soft text-success",
   },
 };
 

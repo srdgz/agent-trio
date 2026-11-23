@@ -20,7 +20,7 @@ const planSchema = z.object({
               value: z
                 .string()
                 .nullable()
-                .describe("Selector CSS, texto o archivo destino. Null en file_exists"),
+                .describe("Ruta web, etiqueta JSX o texto. Null en file_exists"),
               description: z.string().describe("Criterio legible para una persona"),
             }),
           )
@@ -34,11 +34,12 @@ const SYSTEM = `Eres el agente Orquestador de un equipo de desarrollo web. Divid
 
 Reglas:
 - Crea entre 1 y ${LIMITS.maxTasks} tareas. Usa las mínimas necesarias.
-- El proyecto es una web estática con HTML, CSS y JavaScript en la raíz. No hay backend ni dependencias externas.
+- El proyecto es Next.js con App Router y TypeScript. Las páginas están en app/<ruta>/page.tsx, los componentes en components/ y los estilos en app/globals.css. No hay backend ni dependencias nuevas.
 - Cada tarea tiene de 1 a ${LIMITS.maxChecksPerTask} comprobaciones objetivas.
-- Tipos: file_exists; selector_exists con un selector CSS simple; text_contains con un texto exacto; links_to con el archivo destino en value.
+- Tipos: file_exists con la ruta del archivo; route_exists con la ruta web en value, por ejemplo /contacto; element_exists con una etiqueta JSX en value, por ejemplo form; text_contains con un texto exacto; links_to con la ruta web destino en value.
+- En path indica siempre un archivo .tsx, .ts o .css existente al terminar la tarea. Si es una página, se comprueban también sus componentes y su layout.
 - Las comprobaciones deben ser alcanzables al terminar esa tarea, sin depender de tareas posteriores.
-- Si una página nueva se enlaza desde el menú, incluye el enlace en todas las páginas existentes.
+- La navegación principal está en components/site-header.tsx.
 - Escribe en español.
 
 ${UNTRUSTED_DATA_RULE}`;

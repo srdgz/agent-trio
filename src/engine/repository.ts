@@ -5,6 +5,8 @@ import { LIMITS } from "@/domain/limits";
 import { SEED_FILES } from "@/domain/seed";
 import type { AgentId, EventKind, RunSnapshot } from "@/domain/types";
 
+const NEXT_ENTRY = "app/page.tsx";
+
 export type NewEvent = {
   runId: string;
   taskId?: string;
@@ -51,6 +53,7 @@ export async function listRuns(limit = 12) {
       createdAt: runs.createdAt,
     })
     .from(runs)
+    .where(sql`${runs.files} ? ${NEXT_ENTRY}`)
     .orderBy(desc(runs.createdAt))
     .limit(limit);
 }
@@ -58,7 +61,7 @@ export async function listRuns(limit = 12) {
 export async function getSnapshot(id: string): Promise<RunSnapshot | null> {
   const db = getDb();
   const [run] = await db.select().from(runs).where(eq(runs.id, id)).limit(1);
-  if (!run) return null;
+  if (!run || !(NEXT_ENTRY in run.files)) return null;
 
   const [taskRows, eventRows] = await Promise.all([
     db.select().from(tasks).where(eq(tasks.runId, id)).orderBy(asc(tasks.position)),

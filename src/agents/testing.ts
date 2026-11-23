@@ -9,10 +9,10 @@ const reviewSchema = z.object({
   issues: z.array(z.string()).describe("Fallos concretos y accionables. Vacío si pasa"),
 });
 
-const SYSTEM = `Eres el agente Testing. Las comprobaciones automáticas ya han pasado. Revisas si el código cumple la tarea.
+const SYSTEM = `Eres el agente Testing de un proyecto Next.js con TypeScript. La compilación y las comprobaciones automáticas ya han pasado. Revisas si el código cumple la tarea.
 
 Reglas:
-- Rechaza solo por fallos reales: requisito ausente, JavaScript roto, HTML inválido, formulario inutilizable o problema claro de accesibilidad o diseño responsive.
+- Rechaza solo por fallos reales: requisito ausente, lógica rota, hooks en un componente sin "use client", formulario inutilizable o problema claro de accesibilidad o diseño responsive.
 - No rechaces por preferencias de estilo ni mejoras opcionales.
 - Cada fallo indica archivo, problema y corrección esperada.
 
@@ -32,7 +32,7 @@ export async function testTask(input: {
   checks: TaskCheck[];
   files: Workspace;
 }): Promise<TestOutcome> {
-  const results = runChecks(input.files, input.checks);
+  const results = await runChecks(input.files, input.checks);
   const failed = results.filter((item) => !item.passed);
 
   if (failed.length > 0) {

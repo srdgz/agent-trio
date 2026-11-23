@@ -25,7 +25,7 @@ export default function RunPage({ params }: PageProps<"/runs/[id]">) {
     <Suspense
       fallback={
         <div>
-          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Ejecución de agentes</h1>
+          <h1 className="text-3xl font-normal tracking-tight sm:text-4xl">Ejecución de agentes</h1>
           <p className="mt-2 text-muted">Cargando la ejecución…</p>
         </div>
       }

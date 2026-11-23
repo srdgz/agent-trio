@@ -11,7 +11,8 @@ export const TASK_STATUSES = [
 export const EVENT_KINDS = ["info", "start", "success", "warning", "error"] as const;
 export const CHECK_TYPES = [
   "file_exists",
-  "selector_exists",
+  "route_exists",
+  "element_exists",
   "text_contains",
   "links_to",
 ] as const;

@@ -2,22 +2,19 @@ import { describe, expect, it } from "vitest";
 import { SEED_FILES } from "@/domain/seed";
 import { buildPreview } from "./preview";
 
+const ORIGIN = "https://agent-trio.test";
+
 describe("buildPreview", () => {
-  it("inlines assets and adds a restrictive CSP", () => {
-    const html = buildPreview(SEED_FILES, "index.html");
-    expect(html).toContain("Content-Security-Policy");
+  it("adds a restrictive CSP and the runtime", () => {
+    const html = buildPreview(SEED_FILES, "/", ORIGIN);
     expect(html).toContain("default-src 'none'");
-    expect(html).toContain("--accent");
-    expect(html).not.toContain('href="styles.css"');
-    expect(html).not.toContain('src="main.js"');
+    expect(html).toContain("form-action 'none'");
+    expect(html).toContain(`${ORIGIN}/preview-runtime.js`);
+    expect(html).not.toContain("connect-src");
   });
 
-  it("prevents assets from closing their inline tag", () => {
-    const files = { ...SEED_FILES, "main.js": 'var a = "</script><img src=x>";' };
-    expect(buildPreview(files, "index.html")).not.toContain('"</script><img');
-  });
-
-  it("returns an empty document for unknown pages", () => {
-    expect(buildPreview(SEED_FILES, "missing.html")).toBe("");
+  it("prevents file contents from closing the data script", () => {
+    const files = { ...SEED_FILES, "lib/data.ts": 'export const a = "</script><img src=x>";' };
+    expect(buildPreview(files, "/", ORIGIN)).not.toContain("</script><img");
   });
 });

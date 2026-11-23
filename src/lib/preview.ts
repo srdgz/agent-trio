@@ -1,50 +1,42 @@
-import { parse } from "node-html-parser";
-import { resolveInternalPath } from "@/domain/workspace";
 import type { Workspace } from "@/domain/types";
 
 export const PREVIEW_MESSAGE = "agent-trio-preview-navigate";
 
-const CSP =
-  "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:; font-src data:; form-action 'none'; base-uri 'none'";
+const LINE_SEPARATOR = String.fromCharCode(0x2028);
+const PARAGRAPH_SEPARATOR = String.fromCharCode(0x2029);
 
-const NAVIGATION_SCRIPT = `<script>
-document.addEventListener("click", function (event) {
-  var target = event.target instanceof Element ? event.target.closest("a[href]") : null;
-  if (!target) return;
-  var href = target.getAttribute("href") || "";
-  if (href.charAt(0) === "#") return;
-  event.preventDefault();
-  parent.postMessage({ type: "${PREVIEW_MESSAGE}", href: href }, "*");
-});
-</script>`;
+function serialize(value: unknown) {
+  return JSON.stringify(value)
+    .replaceAll("<", "\\u003c")
+    .replaceAll(LINE_SEPARATOR, "\\u2028")
+    .replaceAll(PARAGRAPH_SEPARATOR, "\\u2029");
+}
 
-export function buildPreview(files: Workspace, page: string) {
-  const source = files[page];
-  if (source === undefined) return "";
-  const root = parse(source, { comment: false });
+export function buildPreview(files: Workspace, route: string, origin: string) {
+  const csp = [
+    "default-src 'none'",
+    "style-src 'unsafe-inline'",
+    `script-src 'unsafe-inline' 'unsafe-eval' ${origin}`,
+    "img-src data:",
+    "font-src data:",
+    "form-action 'none'",
+    "base-uri 'none'",
+  ].join("; ");
+  const data = serialize({ files, route, message: PREVIEW_MESSAGE });
 
-  for (const link of root.querySelectorAll("link[rel=stylesheet]")) {
-    const path = resolveInternalPath(page, link.getAttribute("href") ?? "");
-    const css = path ? files[path] : undefined;
-    if (css === undefined) link.remove();
-    else link.replaceWith(`<style>${css.replace(/<\/style/gi, "<\\/style")}</style>`);
-  }
-
-  for (const script of root.querySelectorAll("script[src]")) {
-    const path = resolveInternalPath(page, script.getAttribute("src") ?? "");
-    const code = path ? files[path] : undefined;
-    if (code === undefined) script.remove();
-    else script.replaceWith(`<script>${code.replace(/<\/script/gi, "<\\/script")}</script>`);
-  }
-
-  const meta = `<meta http-equiv="Content-Security-Policy" content="${CSP}">`;
-  const head = root.querySelector("head");
-  if (head) head.insertAdjacentHTML("afterbegin", meta);
-  else root.insertAdjacentHTML("afterbegin", meta);
-
-  const body = root.querySelector("body");
-  if (body) body.insertAdjacentHTML("beforeend", NAVIGATION_SCRIPT);
-  else root.insertAdjacentHTML("beforeend", NAVIGATION_SCRIPT);
-
-  return root.toString();
+  return `<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="${csp}">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vista previa ${route}</title>
+<style>body{margin:0}</style>
+</head>
+<body>
+<div id="root"></div>
+<script>window.__PREVIEW__=${data};</script>
+<script src="${origin}/preview-runtime.js"></script>
+</body>
+</html>`;
 }

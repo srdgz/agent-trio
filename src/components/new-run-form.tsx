@@ -2,12 +2,13 @@
 
 import { useRouter } from "next/navigation";
 import { useRef, useState, type FormEvent } from "react";
+import { Icon } from "@/components/icons";
 import { LIMITS } from "@/domain/limits";
 
 const SUGGESTIONS = [
-  "Añade una página de contacto a esta web",
-  "Añade una sección de preguntas frecuentes en servicios",
-  "Crea una página de proyectos con tres trabajos de ejemplo",
+  "Añade una página de contacto",
+  "Añade preguntas frecuentes en servicios",
+  "Crea una página de proyectos con tres trabajos",
 ];
 
 export function NewRunForm() {
@@ -52,25 +53,25 @@ export function NewRunForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="card p-4 sm:p-6">
-      <label htmlFor="request" className="block text-lg font-semibold">
-        ¿Qué cambio necesita la web?
+    <form onSubmit={handleSubmit} noValidate>
+      <label htmlFor="request" className="block font-display text-2xl font-medium tracking-tight">
+        ¿Qué cambio necesita la app?
       </label>
       <p id="request-hint" className="mt-1 text-muted">
-        Los agentes trabajarán sobre Taller Norte, una web de ejemplo.
+        Los agentes trabajarán sobre Taller Norte, una app Next.js de ejemplo.
       </p>
       <textarea
         ref={inputRef}
         id="request"
         name="request"
-        rows={3}
+        rows={4}
         required
         maxLength={LIMITS.requestMaxLength}
         value={request}
         onChange={(event) => setRequest(event.target.value)}
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? "request-hint request-error" : "request-hint"}
-        className="field mt-3 resize-y"
+        className="field mt-4 resize-y"
       />
       {error ? (
         <p id="request-error" role="alert" className="mt-2 font-medium text-danger">
@@ -90,7 +91,7 @@ export function NewRunForm() {
                 setError(null);
                 inputRef.current?.focus();
               }}
-              className="btn btn-secondary text-left text-sm font-medium"
+              className="btn-chip"
             >
               {suggestion}
             </button>
@@ -100,6 +101,7 @@ export function NewRunForm() {
 
       <button type="submit" disabled={submitting} className="btn btn-primary mt-5 w-full sm:w-auto">
         {submitting ? "Iniciando…" : "Lanzar agentes"}
+        <Icon name="arrow" className="size-4" />
       </button>
     </form>
   );

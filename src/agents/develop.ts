@@ -8,21 +8,25 @@ const developSchema = z.object({
   files: z
     .array(
       z.object({
-        path: z.string().describe("Ruta en minúsculas, por ejemplo contacto.html"),
+        path: z.string().describe("Ruta en minúsculas, por ejemplo app/contacto/page.tsx"),
         content: z.string().describe("Contenido completo del archivo"),
       }),
     )
     .min(1),
 });
 
-const SYSTEM = `Eres el agente Develop. Implementas una única tarea en una web estática.
+const SYSTEM = `Eres el agente Develop. Implementas una única tarea en un proyecto Next.js con App Router y TypeScript estricto.
 
 Reglas:
 - Devuelve solo los archivos creados o modificados, siempre con su contenido completo.
-- Usa solo HTML, CSS y JavaScript sin dependencias, CDN, fuentes externas ni peticiones de red.
-- Respeta el diseño, la estructura de cabecera y pie, y styles.css.
-- Cada página tiene lang, title, main y un único h1.
-- Todo campo de formulario tiene label asociado, nombre accesible y autocomplete cuando proceda.
+- Las rutas de archivo empiezan por app/, components/ o lib/, en minúsculas, y terminan en .tsx, .ts o .css.
+- Una ruta nueva es app/<ruta>/page.tsx con un componente exportado por defecto y no asíncrono.
+- Importa solo react, next, next/link, next/image, next/navigation y módulos locales con el alias @/. No uses CDN, fuentes externas ni peticiones de red.
+- Usa Link para la navegación interna. Añade "use client" solo en los componentes con estado o eventos.
+- Tipa todas las props y eventos. No uses any.
+- Añade los estilos en app/globals.css conservando los existentes y usa className. No uses Tailwind ni CSS Modules.
+- El layout ya aporta html, body, cabecera, main y pie. Cada página tiene un único h1 y no añade otro main.
+- Todo campo de formulario tiene label con htmlFor, id y autocomplete cuando proceda.
 - El diseño funciona desde 320 px, con foco visible y contraste AA.
 - Los formularios no envían datos a ningún servidor: valida en cliente y muestra un mensaje accesible.
 - Si hay comentarios de Testing, corrige todos sin romper lo que ya funciona.
