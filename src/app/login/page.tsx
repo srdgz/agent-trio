@@ -5,6 +5,7 @@ import { LoginForm } from "@/components/login-form";
 import { LoginShowcase } from "@/components/login-showcase";
 import { AGENT_INFO } from "@/domain/labels";
 import { AGENTS } from "@/domain/types";
+import "./login.css";
 
 export const metadata: Metadata = { title: "Iniciar sesión" };
 
