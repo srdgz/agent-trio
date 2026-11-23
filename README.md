@@ -41,7 +41,7 @@ Testing combina dos capas. Primero compila el proyecto generado con el compilado
 - **Resiliencia:** los errores de cuota o disponibilidad pasan al modelo de respaldo y después se reintentan con espera.
 - **Vista previa de Next.js:** los componentes TSX generados se ejecutan en el navegador con un runtime propio que resuelve el App Router, `next/link`, `next/image` y `next/navigation`. Es una simulación ligera: no ejecuta funciones de servidor ni un build completo de Next.js.
 - **Seguridad:** toda la consola requiere sesión, las claves solo existen en variables de entorno y hay un límite diario. El código generado nunca se ejecuta en el servidor: se muestra en un iframe aislado con CSP, sin acceso a red ni a la aplicación.
-- **Accesibilidad:** interfaz orientada a WCAG 2.2 AA, con navegación por teclado, foco visible, estados anunciados a lectores de pantalla, modo oscuro, movimiento reducido y seguimiento automático desactivable.
+- **Accesibilidad:** interfaz orientada a WCAG 2.2 AA, con navegación por teclado, foco visible, estados anunciados a lectores de pantalla, tema claro u oscuro según el sistema, movimiento reducido y seguimiento automático desactivable.
 
 ## Limitaciones conocidas
 
@@ -74,7 +74,7 @@ pnpm test
 E2E_BASE_URL=http://localhost:3000 pnpm test:e2e
 ```
 
-Las pruebas end-to-end auditan WCAG 2.2 AA con axe en 320, 768 y 1440 px, en tema claro y oscuro, además del login, la protección de la API, la vista previa y la navegación por teclado. La auditoría automática no sustituye una revisión manual con lector de pantalla.
+La interfaz no tiene selector de tema: usa el tema claro u oscuro según la preferencia del sistema o del navegador. Las pruebas end-to-end auditan WCAG 2.2 AA con axe en 320, 768 y 1440 px, simulando ambas preferencias, además del login, la protección de la API, la vista previa y la navegación por teclado. La auditoría automática no sustituye una revisión manual con lector de pantalla.
 
 ## Uso de Claude Code
 
