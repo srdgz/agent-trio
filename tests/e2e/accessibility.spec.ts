@@ -88,6 +88,16 @@ test("anonymous users are redirected and the API is protected", async ({ page, r
   expect((await request.get("/api/portfolio")).status()).toBe(401);
 });
 
+test("favicons are public", async ({ page, request }) => {
+  for (const path of ["/favicon.ico", "/icon.svg", "/apple-icon.png"]) {
+    const response = await request.get(path, { maxRedirects: 0 });
+    expect(response.status()).toBe(200);
+    expect(response.headers()["content-type"]).toMatch(/image/);
+  }
+  await page.goto("/login");
+  await expect(page.locator('link[rel="icon"][type="image/svg+xml"]')).toHaveCount(1);
+});
+
 test("login rejects bad credentials and accepts the test user", async ({ page }) => {
   await page.goto("/login");
   await page.getByLabel("Usuario").fill("nadie");
