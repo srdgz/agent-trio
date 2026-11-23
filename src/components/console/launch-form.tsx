@@ -24,6 +24,7 @@ export function LaunchForm({
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const blocked = disabledReason !== null;
+  const isEmpty = request.trim().length === 0;
 
   function fail(message: string) {
     setError(message);
@@ -33,7 +34,7 @@ export function LaunchForm({
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (submitting || blocked) return;
+    if (submitting || blocked || isEmpty) return;
     if (request.trim().length < LIMITS.requestMinLength) {
       fail(`Escribe al menos ${LIMITS.requestMinLength} caracteres.`);
       return;
@@ -81,7 +82,7 @@ export function LaunchForm({
           placeholder="Ej.: añade una página de contacto"
           className="field min-w-0 flex-1"
         />
-        <button type="submit" disabled={submitting || blocked} className="btn btn-primary shrink-0">
+        <button type="submit" disabled={submitting || blocked || isEmpty} className="btn btn-primary shrink-0">
           {submitting ? "Lanzando…" : "Lanzar agentes"}
           <Icon name="arrow" className="size-4" />
         </button>

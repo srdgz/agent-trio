@@ -68,11 +68,11 @@ export function ProjectWorkspace({ initial }: { initial: ProjectDetail }) {
     <div className="space-y-3">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <Link href="/" className="inline-flex min-h-6 items-center gap-1 text-sm text-muted underline">
-            <Icon name="back" className="size-3.5" />
-            Proyectos
+          <Link href="/" className="btn btn-secondary">
+            <Icon name="back" className="size-4" />
+            Volver a proyectos
           </Link>
-          <div className="mt-0.5 flex flex-wrap items-center gap-2">
+          <div className="mt-3 flex flex-wrap items-center gap-2">
             <h1 className="text-xl font-semibold">{project.name}</h1>
             <StatusBadge {...STAGE_INFO[stage]} />
           </div>

@@ -126,6 +126,21 @@ test("preview renders the generated Next.js routes", async ({ page, context, bas
   await expect(page.frameLocator('iframe[title^="Vista previa"]').getByRole("heading", { level: 1 })).toHaveText(label);
 });
 
+test("launch button stays disabled until the request has text", async ({ page, context, baseURL }) => {
+  await authenticate(context, baseURL!);
+  await openFirstProject(page);
+  await expect(page.getByRole("link", { name: "Volver a proyectos" })).toBeVisible();
+  const input = page.getByLabel("Nueva petición para este proyecto");
+  const button = page.getByRole("button", { name: "Lanzar agentes" });
+  await expect(button).toBeDisabled();
+  await input.fill("   ");
+  await expect(button).toBeDisabled();
+  await input.fill("Añade una página");
+  await expect(button).toBeEnabled();
+  await input.fill("");
+  await expect(button).toBeDisabled();
+});
+
 test("skip link moves focus to the main content", async ({ page }) => {
   await page.goto("/login");
   await page.keyboard.press("Tab");

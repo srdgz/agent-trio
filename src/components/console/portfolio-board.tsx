@@ -133,11 +133,11 @@ export function PortfolioBoard() {
     <div className="space-y-4">
       <h1 className="text-xl font-semibold">Proyectos</h1>
 
-      <dl className="card grid grid-cols-2 divide-border sm:grid-cols-4 xl:grid-cols-7">
+      <dl className="flex flex-wrap gap-3">
         {metrics.map((metric) => (
-          <div key={metric.label} className="px-3 py-2">
+          <div key={metric.label} className="card min-w-0 flex-1 basis-32 px-3 py-2.5">
             <dt className="text-xs text-muted">{metric.label}</dt>
-            <dd className="font-mono text-lg font-semibold">{metric.value}</dd>
+            <dd className="mt-0.5 font-mono text-xl font-semibold">{metric.value}</dd>
           </div>
         ))}
       </dl>
@@ -156,7 +156,7 @@ export function PortfolioBoard() {
         />
       </section>
 
-      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_22rem]">
+      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <section aria-labelledby="board-title" className="min-w-0">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <h2 id="board-title" className="section-title">
@@ -198,7 +198,7 @@ export function PortfolioBoard() {
           {visible.length === 0 ? (
             <p className="card mt-3 p-4 text-muted">Ningún proyecto coincide con los filtros.</p>
           ) : (
-            <ul className="mt-3 grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
+            <ul className="mt-3 grid gap-3 md:grid-cols-2">
               {visible.map((project) => (
                 <ProjectCard
                   key={project.id}
