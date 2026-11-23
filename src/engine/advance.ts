@@ -1,24 +1,26 @@
+import { diffLines } from "diff";
 import { asc, eq } from "drizzle-orm";
 import { developTask } from "@/agents/develop";
 import { TransientModelError } from "@/agents/model";
 import { planTasks } from "@/agents/orchestrator";
 import { testTask } from "@/agents/testing";
 import { getDb } from "@/db/client";
-import { events, runs, tasks, type RunRow, type TaskRow } from "@/db/schema";
+import { events, fileChanges, projects, runs, tasks, type RunRow, type TaskRow } from "@/db/schema";
 import { LIMITS } from "@/domain/limits";
-import type { CheckResult } from "@/domain/types";
+import type { CheckResult, Workspace } from "@/domain/types";
 import { WorkspaceError, applyChanges } from "@/domain/workspace";
 import {
-  acquireLease,
+  acquireNextRun,
   insertEvent,
   markRunFailed,
   releaseLease,
+  saveDraft,
   scheduleRetry,
 } from "./repository";
 
 export type AdvanceResult =
   | { state: "advanced" }
-  | { state: "busy" }
+  | { state: "idle" }
   | { state: "retry"; retryAfterMs: number };
 
 function viaFallback(usedFallback: boolean) {
@@ -26,19 +28,22 @@ function viaFallback(usedFallback: boolean) {
 }
 
 async function planStep(run: RunRow) {
-  await insertEvent({
-    runId: run.id,
-    agent: "orchestrator",
-    kind: "start",
-    message: "Analizando la petición y dividiéndola en tareas.",
-  });
+  const db = getDb();
+  await db.batch([
+    db.update(runs).set({ status: "planning" }).where(eq(runs.id, run.id)),
+    db.insert(events).values({
+      runId: run.id,
+      agent: "orchestrator",
+      kind: "start",
+      message: "Analizando la petición y dividiéndola en tareas.",
+    }),
+  ]);
 
   const plan = await planTasks(run.request, run.files);
   if (plan.tasks.some((task) => task.checks.length === 0)) {
     throw new TransientModelError("El plan no incluye comprobaciones válidas.", 2_000);
   }
 
-  const db = getDb();
   const ids = plan.tasks.map(() => crypto.randomUUID());
   await db.batch([
     db.insert(tasks).values(
@@ -99,6 +104,29 @@ async function rejectTask(
   }
 }
 
+function lineStats(before: string, after: string) {
+  let additions = 0;
+  let deletions = 0;
+  for (const part of diffLines(before, after)) {
+    if (part.added) additions += part.count ?? 0;
+    if (part.removed) deletions += part.count ?? 0;
+  }
+  return { additions, deletions };
+}
+
+function buildChanges(run: RunRow, task: TaskRow, attempt: number, next: Workspace, paths: string[]) {
+  return [...new Set(paths)]
+    .filter((path) => run.files[path] !== next[path])
+    .map((path) => ({
+      runId: run.id,
+      taskId: task.id,
+      attempt,
+      path,
+      kind: path in run.files ? ("modified" as const) : ("added" as const),
+      ...lineStats(run.files[path] ?? "", next[path]),
+    }));
+}
+
 async function developStep(run: RunRow, task: TaskRow) {
   const db = getDb();
   await db.batch([
@@ -115,20 +143,33 @@ async function developStep(run: RunRow, task: TaskRow) {
     }),
   ]);
 
-  const { data, tokens, usedFallback } = await developTask({
-    request: run.request,
-    title: task.title,
-    description: task.description,
-    criteria: task.checks.map((check) => check.description),
-    feedback: task.feedback,
-    files: run.files,
-  });
+  let lastWrite = 0;
+  let pendingWrite: Promise<unknown> = Promise.resolve();
+  const { data, tokens, usedFallback } = await developTask(
+    {
+      request: run.request,
+      title: task.title,
+      description: task.description,
+      criteria: task.checks.map((check) => check.description),
+      feedback: task.feedback,
+      files: run.files,
+    },
+    (draft) => {
+      const now = Date.now();
+      if (now - lastWrite < LIMITS.draftWriteMs || Object.keys(draft).length === 0) return;
+      lastWrite = now;
+      pendingWrite = pendingWrite.then(() => saveDraft(run.id, draft)).catch(() => undefined);
+    },
+  );
+  await pendingWrite;
 
   const attempts = task.attempts + 1;
   try {
     const files = applyChanges(run.files, data.files);
+    const changes = buildChanges(run, task, attempts, files, data.files.map((file) => file.path));
+    if (changes.length > 0) await db.insert(fileChanges).values(changes);
     await db.batch([
-      db.update(runs).set({ files }).where(eq(runs.id, run.id)),
+      db.update(runs).set({ files, draft: null }).where(eq(runs.id, run.id)),
       db
         .update(tasks)
         .set({ status: "in_review", attempts, updatedAt: new Date() })
@@ -193,18 +234,22 @@ async function completeRun(run: RunRow) {
   const db = getDb();
   await db.batch([
     db.update(runs).set({ status: "completed" }).where(eq(runs.id, run.id)),
+    db
+      .update(projects)
+      .set({ files: run.files, updatedAt: new Date() })
+      .where(eq(projects.id, run.projectId!)),
     db.insert(events).values({
       runId: run.id,
       agent: "orchestrator",
       kind: "success",
-      message: "Todas las tareas han pasado las pruebas.",
+      message: "Todas las tareas han pasado las pruebas. Cambios aplicados al proyecto.",
     }),
   ]);
   return 0;
 }
 
 async function executeStep(run: RunRow) {
-  if (run.status === "planning") return planStep(run);
+  if (run.status === "queued" || run.status === "planning") return planStep(run);
 
   const rows = await getDb()
     .select()
@@ -240,9 +285,9 @@ async function handleTransient(run: RunRow, error: TransientModelError): Promise
   return { state: "retry", retryAfterMs: error.retryAfterMs };
 }
 
-export async function advanceRun(id: string): Promise<AdvanceResult> {
-  const run = await acquireLease(id);
-  if (!run) return { state: "busy" };
+export async function advanceNextRun(): Promise<AdvanceResult> {
+  const run = await acquireNextRun();
+  if (!run) return { state: "idle" };
 
   try {
     const tokens = await executeStep(run);

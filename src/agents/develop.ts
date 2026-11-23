@@ -1,7 +1,8 @@
 import { z } from "zod";
 import type { Workspace } from "@/domain/types";
+import { isSafePath } from "@/domain/workspace";
 import { UNTRUSTED_DATA_RULE, renderWorkspace } from "./context";
-import { generateStructured } from "./model";
+import { streamStructured } from "./model";
 
 const developSchema = z.object({
   notes: z.string().describe("Qué has cambiado, en español y en una o dos frases"),
@@ -34,23 +35,38 @@ Reglas:
 
 ${UNTRUSTED_DATA_RULE}`;
 
-export async function developTask(input: {
-  request: string;
-  title: string;
-  description: string;
-  criteria: string[];
-  feedback: string[];
-  files: Workspace;
-}) {
+function toDraft(partial: unknown): Workspace {
+  const files = (partial as { files?: ({ path?: unknown; content?: unknown } | undefined)[] } | undefined)?.files;
+  const draft: Workspace = {};
+  for (const file of files ?? []) {
+    if (typeof file?.path === "string" && typeof file.content === "string" && isSafePath(file.path)) {
+      draft[file.path] = file.content;
+    }
+  }
+  return draft;
+}
+
+export async function developTask(
+  input: {
+    request: string;
+    title: string;
+    description: string;
+    criteria: string[];
+    feedback: string[];
+    files: Workspace;
+  },
+  onDraft: (draft: Workspace) => void,
+) {
   const feedback =
     input.feedback.length > 0
       ? `\n\nFallos que debes corregir:\n<feedback>\n${input.feedback.join("\n")}\n</feedback>`
       : "";
 
-  return generateStructured({
-    agent: "develop",
-    system: SYSTEM,
-    prompt: `Petición original: <request>${input.request}</request>
+  return streamStructured(
+    {
+      agent: "develop",
+      system: SYSTEM,
+      prompt: `Petición original: <request>${input.request}</request>
 
 Tarea: ${input.title}
 ${input.description}
@@ -60,6 +76,8 @@ ${input.criteria.map((criterion) => `- ${criterion}`).join("\n")}${feedback}
 
 Proyecto actual:
 ${renderWorkspace(input.files)}`,
-    schema: developSchema,
-  });
+      schema: developSchema,
+    },
+    (partial) => onDraft(toDraft(partial)),
+  );
 }

@@ -19,5 +19,5 @@ export async function login(_state: LoginState, formData: FormData): Promise<Log
 
 export async function logout() {
   await destroySession();
-  redirect("/");
+  redirect("/login");
 }

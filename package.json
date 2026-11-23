@@ -12,7 +12,8 @@
     "test": "pnpm assets && vitest run",
     "test:e2e": "playwright test",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate",
+    "db:seed": "tsx src/db/seed.ts"
   },
   "dependencies": {
     "@ai-sdk/google": "^4.0.124",
@@ -21,6 +22,7 @@
     "@ai-sdk/openai-compatible": "^3.0.94",
     "@neondatabase/serverless": "^1.2.1",
     "ai": "^7.0.179",
+    "diff": "^9.0.0",
     "drizzle-orm": "^0.45.4",
     "jose": "^6.2.18",
     "next": "16.4.6",
@@ -44,6 +46,7 @@
     "eslint-config-next": "16.4.6",
     "sucrase": "^3.35.1",
     "tailwindcss": "4.3.3",
+    "tsx": "^4.23.15",
     "vitest": "^5.1.1"
   },
   "packageManager": "pnpm@12.9.1"

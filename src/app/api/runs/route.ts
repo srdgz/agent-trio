@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { LIMITS, maxRunsPerDay } from "@/domain/limits";
-import { createRun, runsCreatedToday } from "@/engine/repository";
+import { createRuns, runsCreatedToday } from "@/engine/repository";
 import { isAuthenticated } from "@/lib/auth";
 
 const bodySchema = z.object({
+  projectIds: z.array(z.uuid()).min(1).max(LIMITS.maxBatch),
   request: z.string().trim().min(LIMITS.requestMinLength).max(LIMITS.requestMaxLength),
 });
 
@@ -17,19 +18,27 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     return NextResponse.json(
       {
-        error: `Describe la petición con entre ${LIMITS.requestMinLength} y ${LIMITS.requestMaxLength} caracteres.`,
+        error: `Selecciona entre 1 y ${LIMITS.maxBatch} proyectos y describe la petición con entre ${LIMITS.requestMinLength} y ${LIMITS.requestMaxLength} caracteres.`,
       },
       { status: 400 },
     );
   }
 
-  if ((await runsCreatedToday()) >= maxRunsPerDay()) {
+  const projectIds = [...new Set(parsed.data.projectIds)];
+  const remaining = maxRunsPerDay() - (await runsCreatedToday());
+  if (projectIds.length > remaining) {
     return NextResponse.json(
-      { error: "Se ha alcanzado el límite diario de ejecuciones de la demo." },
+      { error: `Quedan ${Math.max(remaining, 0)} ejecuciones disponibles hoy.` },
       { status: 429 },
     );
   }
 
-  const id = await createRun(parsed.data.request);
-  return NextResponse.json({ id }, { status: 201 });
+  const { created, skipped } = await createRuns(projectIds, parsed.data.request);
+  if (created.length === 0) {
+    return NextResponse.json(
+      { error: "Los proyectos seleccionados ya tienen una ejecución activa." },
+      { status: 409 },
+    );
+  }
+  return NextResponse.json({ created: created.length, skipped }, { status: 201 });
 }

@@ -23,10 +23,7 @@ async function authenticate(context: BrowserContext, baseURL: string) {
 }
 
 async function expectAccessible(page: Page) {
-  const { violations } = await new AxeBuilder({ page })
-    .withTags(WCAG_TAGS)
-    .exclude("iframe")
-    .analyze();
+  const { violations } = await new AxeBuilder({ page }).withTags(WCAG_TAGS).exclude("iframe").analyze();
   const summary = violations.map((item) => ({
     id: item.id,
     targets: item.nodes.slice(0, 3).map((node) => node.target.join(" ")),
@@ -42,32 +39,37 @@ async function expectNoHorizontalScroll(page: Page) {
   expect(overflow).toBeLessThanOrEqual(0);
 }
 
+async function openFirstProject(page: Page) {
+  await page.goto("/");
+  await page.locator('h3 a[href^="/projects/"]').first().click();
+  await expect(page.getByRole("tab", { name: "Cambios" })).toBeVisible();
+}
+
 for (const viewport of VIEWPORTS) {
   for (const colorScheme of SCHEMES) {
     test.describe(`${viewport.name}px ${colorScheme}`, () => {
       test.use({ viewport: { width: viewport.width, height: viewport.height }, colorScheme });
 
-      test("public pages", async ({ page }) => {
-        for (const path of ["/", "/login", "/ruta-inexistente"]) {
-          await page.goto(path, { waitUntil: "networkidle" });
-          await expectAccessible(page);
-          await expectNoHorizontalScroll(page);
-        }
+      test("login", async ({ page }) => {
+        await page.goto("/login");
+        await expect(page.getByRole("heading", { name: "Iniciar sesión" })).toBeVisible();
+        await expectAccessible(page);
+        await expectNoHorizontalScroll(page);
       });
 
-      test("authenticated home and run dashboard", async ({ page, context, baseURL }) => {
+      test("portfolio and project workspace", async ({ page, context, baseURL }) => {
         await authenticate(context, baseURL!);
         await page.goto("/");
-        await expect(page.getByLabel("¿Qué cambio necesita la app?")).toBeVisible();
+        await expect(page.getByRole("heading", { name: "Proyectos", level: 1 })).toBeVisible();
+        await expect(page.locator('h3 a[href^="/projects/"]')).toHaveCount(3);
         await expectAccessible(page);
         await expectNoHorizontalScroll(page);
 
-        await page.locator('a[href^="/runs/"]').first().click();
-        await expect(page.getByRole("heading", { name: "Agentes", exact: true })).toBeVisible();
+        await openFirstProject(page);
         await expectAccessible(page);
         await expectNoHorizontalScroll(page);
 
-        await page.getByRole("tab", { name: "Vista previa" }).focus();
+        await page.getByRole("tab", { name: "Cambios" }).focus();
         await page.keyboard.press("ArrowRight");
         await expect(page.getByRole("tab", { name: "Código" })).toBeFocused();
         await expect(page.getByRole("tabpanel", { name: "Código" })).toBeVisible();
@@ -78,8 +80,16 @@ for (const viewport of VIEWPORTS) {
   }
 }
 
+test("anonymous users are redirected and the API is protected", async ({ page, request }) => {
+  await page.goto("/");
+  await expect(page).toHaveURL(/\/login$/);
+  expect((await request.post("/api/runs", { data: {} })).status()).toBe(401);
+  expect((await request.post("/api/engine/tick")).status()).toBe(401);
+  expect((await request.get("/api/portfolio")).status()).toBe(401);
+});
+
 test("login rejects bad credentials and accepts the test user", async ({ page }) => {
-  await page.goto("/login", { waitUntil: "networkidle" });
+  await page.goto("/login");
   await page.getByLabel("Usuario").fill("nadie");
   await page.getByLabel("Contraseña", { exact: true }).fill("incorrecta");
   await page.getByRole("button", { name: "Entrar" }).click();
@@ -90,11 +100,11 @@ test("login rejects bad credentials and accepts the test user", async ({ page })
   await page.getByLabel("Contraseña", { exact: true }).fill(process.env.DEMO_PASSWORD ?? "");
   await page.getByRole("button", { name: "Entrar" }).click();
   await expect(page.getByRole("button", { name: "Cerrar sesión" })).toBeVisible();
-  await expect(page.getByLabel("¿Qué cambio necesita la app?")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Proyectos", level: 1 })).toBeVisible();
 });
 
 test("password visibility is toggled inside the input", async ({ page }) => {
-  await page.goto("/login", { waitUntil: "networkidle" });
+  await page.goto("/login");
   const input = page.getByLabel("Contraseña", { exact: true });
   await expect(input).toHaveAttribute("type", "password");
   await page.getByRole("button", { name: "Mostrar contraseña" }).click();
@@ -103,25 +113,21 @@ test("password visibility is toggled inside the input", async ({ page }) => {
   await expect(input).toHaveAttribute("type", "password");
 });
 
-test("preview renders the generated Next.js routes", async ({ page }) => {
-  await page.goto("/", { waitUntil: "networkidle" });
-  await page.locator('a[href^="/runs/"]').first().click();
+test("preview renders the generated Next.js routes", async ({ page, context, baseURL }) => {
+  await authenticate(context, baseURL!);
+  await openFirstProject(page);
+  await page.getByRole("tab", { name: "Vista previa" }).click();
   const preview = page.frameLocator('iframe[title^="Vista previa"]');
-  await expect(preview.getByRole("heading", { level: 1 })).toContainText("Carpintería");
-  await preview.getByRole("navigation").getByRole("link", { name: "Servicios" }).click();
-  await expect(page.getByLabel("Ruta")).toHaveValue("/servicios");
-  await expect(page.frameLocator('iframe[title^="Vista previa"]').getByRole("heading", { level: 1 })).toHaveText("Servicios");
-});
-
-test("protected endpoints reject anonymous requests", async ({ request }) => {
-  const create = await request.post("/api/runs", { data: { request: "Añade una página nueva" } });
-  expect(create.status()).toBe(401);
-  const advance = await request.post("/api/runs/00000000-0000-4000-8000-000000000000/advance");
-  expect(advance.status()).toBe(401);
+  await expect(preview.getByRole("heading", { level: 1 })).toContainText("Panel");
+  const link = preview.getByRole("navigation").getByRole("link").nth(1);
+  const label = (await link.textContent()) ?? "";
+  await link.click();
+  await expect(page.getByLabel("Ruta")).not.toHaveValue("/");
+  await expect(page.frameLocator('iframe[title^="Vista previa"]').getByRole("heading", { level: 1 })).toHaveText(label);
 });
 
 test("skip link moves focus to the main content", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/login");
   await page.keyboard.press("Tab");
   const skip = page.getByRole("link", { name: "Saltar al contenido" });
   await expect(skip).toBeFocused();

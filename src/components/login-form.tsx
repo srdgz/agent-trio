@@ -15,7 +15,7 @@ export function LoginForm() {
   return (
     <form action={action} className="mt-6 space-y-4">
       {state.error ? (
-        <p id="login-error" role="alert" className="rounded-2xl bg-danger-soft p-3 font-medium text-danger">
+        <p id="login-error" role="alert" className="rounded-md bg-danger-soft p-3 font-medium text-danger">
           {state.error}
         </p>
       ) : null}
@@ -54,7 +54,7 @@ export function LoginForm() {
             type="button"
             aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
             onClick={() => setShowPassword((value) => !value)}
-            className="absolute right-0 top-0 grid size-11 cursor-pointer place-items-center rounded-full text-muted transition-colors hover:text-foreground"
+            className="absolute right-0 top-0 grid size-10 cursor-pointer place-items-center rounded-md text-muted transition-colors hover:text-foreground"
           >
             <Icon name={showPassword ? "eyeOff" : "eye"} className="size-5" />
           </button>

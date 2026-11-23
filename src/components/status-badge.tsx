@@ -20,9 +20,9 @@ const TONE_ICONS: Record<Tone, IconName> = {
 export function StatusBadge({ label, tone }: { label: string; tone: Tone }) {
   return (
     <span
-      className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1 text-sm font-semibold ${TONE_CLASSES[tone]}`}
+      className={`inline-flex shrink-0 items-center gap-1 rounded px-2 py-0.5 text-[0.8125rem] font-semibold ${TONE_CLASSES[tone]}`}
     >
-      <Icon name={TONE_ICONS[tone]} className="size-4" />
+      <Icon name={TONE_ICONS[tone]} className="size-3.5" />
       {label}
     </span>
   );

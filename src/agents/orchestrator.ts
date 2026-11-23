@@ -39,7 +39,7 @@ Reglas:
 - Tipos: file_exists con la ruta del archivo; route_exists con la ruta web en value, por ejemplo /contacto; element_exists con una etiqueta JSX en value, por ejemplo form; text_contains con un texto exacto; links_to con la ruta web destino en value.
 - En path indica siempre un archivo .tsx, .ts o .css existente al terminar la tarea. Si es una página, se comprueban también sus componentes y su layout.
 - Las comprobaciones deben ser alcanzables al terminar esa tarea, sin depender de tareas posteriores.
-- La navegación principal está en components/site-header.tsx.
+- La navegación principal está en components/site-header.tsx y los datos de ejemplo en lib/data.ts.
 - Escribe en español.
 
 ${UNTRUSTED_DATA_RULE}`;

@@ -2,7 +2,15 @@ import { google } from "@ai-sdk/google";
 import { groq } from "@ai-sdk/groq";
 import { mistral } from "@ai-sdk/mistral";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
-import { APICallError, NoObjectGeneratedError, Output, generateText, type LanguageModel } from "ai";
+import {
+  APICallError,
+  NoObjectGeneratedError,
+  NoOutputGeneratedError,
+  Output,
+  generateText,
+  streamText,
+  type LanguageModel,
+} from "ai";
 import type { z } from "zod";
 import { LIMITS } from "@/domain/limits";
 import type { AgentId } from "@/domain/types";
@@ -45,12 +53,13 @@ function canFallBack(error: unknown) {
   return (
     APICallError.isInstance(error) ||
     NoObjectGeneratedError.isInstance(error) ||
+    NoOutputGeneratedError.isInstance(error) ||
     (error instanceof DOMException && error.name === "TimeoutError")
   );
 }
 
 function toTransientError(error: unknown) {
-  if (NoObjectGeneratedError.isInstance(error)) {
+  if (NoObjectGeneratedError.isInstance(error) || NoOutputGeneratedError.isInstance(error)) {
     return new TransientModelError("El modelo devolvió una respuesta no válida.", 2_000);
   }
   if (error instanceof DOMException && error.name === "TimeoutError") {
@@ -87,6 +96,54 @@ async function callModel<T>(model: LanguageModel, options: StructuredOptions<T>)
     abortSignal: AbortSignal.timeout(LIMITS.modelTimeoutMs),
   });
   return { data: result.output, tokens: result.totalUsage.totalTokens ?? 0 };
+}
+
+async function streamModel<T>(
+  model: LanguageModel,
+  options: StructuredOptions<T>,
+  onPartial: (partial: unknown) => void,
+) {
+  let streamError: unknown;
+  const result = streamText({
+    model,
+    system: options.system,
+    prompt: options.prompt,
+    output: Output.object({ schema: options.schema }),
+    maxRetries: 0,
+    abortSignal: AbortSignal.timeout(LIMITS.modelTimeoutMs),
+    onError({ error }) {
+      streamError = error;
+    },
+  });
+
+  for await (const partial of result.partialOutputStream) onPartial(partial);
+  if (streamError) throw streamError;
+  const [data, usage] = await Promise.all([result.output, result.totalUsage]);
+  return { data, tokens: usage.totalTokens ?? 0 };
+}
+
+export async function streamStructured<T>(
+  options: StructuredOptions<T>,
+  onPartial: (partial: unknown) => void,
+) {
+  try {
+    const result = await streamModel(PRIMARY_MODELS[options.agent](), options, onPartial);
+    return { ...result, usedFallback: false };
+  } catch (primaryError) {
+    if (!canFallBack(primaryError) || !process.env.MISTRAL_API_KEY) {
+      throw toTransientError(primaryError) ?? primaryError;
+    }
+    console.warn("Primary model failed, using fallback", {
+      agent: options.agent,
+      status: APICallError.isInstance(primaryError) ? primaryError.statusCode : undefined,
+    });
+    try {
+      const result = await streamModel(fallbackModel(), options, onPartial);
+      return { ...result, usedFallback: true };
+    } catch (fallbackError) {
+      throw toTransientError(fallbackError) ?? fallbackError;
+    }
+  }
 }
 
 export async function generateStructured<T>(options: StructuredOptions<T>) {

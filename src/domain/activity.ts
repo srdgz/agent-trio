@@ -1,4 +1,4 @@
-import type { AgentActivity, AgentId, RunStatus, TaskStatus } from "./types";
+import type { AgentActivity, AgentId, ProjectStage, RunStatus, TaskStatus } from "./types";
 
 type ActivityInput = {
   runStatus: RunStatus;
@@ -19,4 +19,17 @@ export function agentActivity(agent: AgentId, input: ActivityInput): AgentActivi
     return agent === "orchestrator" ? "blocked" : "idle";
   }
   return activeAgent(input) === agent ? "working" : "idle";
+}
+
+export function projectStage(runStatus: RunStatus | null, taskStatuses: TaskStatus[]): ProjectStage {
+  if (!runStatus) return "idle";
+  if (runStatus !== "running") return runStatus;
+  const current = taskStatuses.find((status) => status !== "done");
+  if (current === "in_review") return "testing";
+  if (current === "changes_requested") return "fixing";
+  return "developing";
+}
+
+export function isActiveStage(stage: ProjectStage) {
+  return ["queued", "planning", "developing", "fixing", "testing"].includes(stage);
 }

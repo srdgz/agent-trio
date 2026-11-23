@@ -1,15 +1,9 @@
 import { createHash, timingSafeEqual } from "node:crypto";
-import { SignJWT, jwtVerify } from "jose";
+import { SignJWT } from "jose";
 import { cookies } from "next/headers";
+import { SESSION_COOKIE, isValidSession, sessionKey } from "./session";
 
-const COOKIE_NAME = "agent_trio_session";
 const SESSION_SECONDS = 60 * 60 * 8;
-
-function secretKey() {
-  const secret = process.env.AUTH_SECRET;
-  if (!secret || secret.length < 32) throw new Error("AUTH_SECRET is not configured");
-  return new TextEncoder().encode(secret);
-}
 
 function safeEqual(left: string, right: string) {
   const a = createHash("sha256").update(left).digest();
@@ -31,10 +25,10 @@ export async function createSession(username: string) {
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime(`${SESSION_SECONDS}s`)
-    .sign(secretKey());
+    .sign(sessionKey());
 
   const store = await cookies();
-  store.set(COOKIE_NAME, token, {
+  store.set(SESSION_COOKIE, token, {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
@@ -45,17 +39,10 @@ export async function createSession(username: string) {
 
 export async function destroySession() {
   const store = await cookies();
-  store.delete(COOKIE_NAME);
+  store.delete(SESSION_COOKIE);
 }
 
 export async function isAuthenticated() {
   const store = await cookies();
-  const token = store.get(COOKIE_NAME)?.value;
-  if (!token) return false;
-  try {
-    await jwtVerify(token, secretKey(), { algorithms: ["HS256"] });
-    return true;
-  } catch {
-    return false;
-  }
+  return isValidSession(store.get(SESSION_COOKIE)?.value);
 }

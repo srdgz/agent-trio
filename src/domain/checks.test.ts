@@ -58,7 +58,7 @@ export function ContactForm() {
       <input id="email" type="email" />
       <button type="submit">Enviar</button>
       {sent ? <p role="status">Gracias</p> : null}
-      <Link href="/servicios">Servicios</Link>
+      <Link href="/contactos">Contactos</Link>
     </form>
   );
 }
@@ -79,7 +79,7 @@ export default function ContactPage() {
       check({ type: "route_exists", value: "/contacto" }),
       check({ type: "element_exists", value: "form" }),
       check({ type: "text_contains", value: "ENVIAR" }),
-      check({ type: "links_to", value: "/servicios" }),
+      check({ type: "links_to", value: "/contactos" }),
     ];
     expect(await failures(files, checks)).toEqual([]);
   });
