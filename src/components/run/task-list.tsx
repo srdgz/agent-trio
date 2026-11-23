@@ -39,7 +39,7 @@ export function TaskList({ tasks }: { tasks: TaskView[] }) {
 
               {task.results.length > 0 ? (
                 <details className="mt-3">
-                  <summary className="flex min-h-11 cursor-pointer items-center font-medium">
+                  <summary className="min-h-11 cursor-pointer py-2.5 font-medium">
                     Comprobaciones: {task.results.filter((item) => item.passed).length} de{" "}
                     {task.results.length} correctas
                   </summary>

@@ -26,13 +26,13 @@ function openRouterModel(modelId: string) {
 }
 
 const PRIMARY_MODELS: Record<AgentId, () => LanguageModel> = {
-  orchestrator: () => google(process.env.ORCHESTRATOR_MODEL || "gemini-3.8-flash"),
+  orchestrator: () => google(process.env.ORCHESTRATOR_MODEL || "gemini-3.6-flash"),
   develop: () => groq(process.env.DEVELOP_MODEL || "openai/gpt-oss-120b"),
   testing: () => openRouterModel(process.env.TESTING_MODEL || "nvidia/nemotron-3.5-super-vl:free"),
 };
 
 function fallbackModel() {
-  return mistral(process.env.FALLBACK_MODEL || "mistral-small-latest");
+  return mistral(process.env.FALLBACK_MODEL || "codestral-latest");
 }
 
 function retryDelay(headers: Record<string, string> | undefined) {

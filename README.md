@@ -1,36 +1,68 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Agent Trio
 
-## Getting Started
+Equipo de tres agentes de IA que recibe una petición sobre una web, la divide en tareas, la implementa y la prueba hasta que todo pasa. El panel muestra en directo qué hace cada agente y en qué estado está cada tarea.
 
-First, run the development server:
+## Cómo funciona
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+```mermaid
+flowchart LR
+  P[Petición] --> O[Orquestador]
+  O -->|tareas y criterios| D[Develop]
+  D -->|archivos| T[Testing]
+  T -->|fallos| D
+  T -->|todo correcto| F[Tarea superada]
+  F -->|siguiente tarea| D
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+| Agente | Proveedor | Modelo por defecto | Función |
+| --- | --- | --- | --- |
+| Orquestador | Gemini AI Studio | `gemini-3.6-flash` | Divide la petición en tareas con criterios verificables |
+| Develop | Groq | `openai/gpt-oss-120b` | Crea o modifica los archivos de cada tarea |
+| Testing | OpenRouter | `nvidia/nemotron-3.5-super-vl:free` | Revisa el código tras las comprobaciones automáticas |
+| Respaldo | Mistral | `codestral-latest` | Continúa si un proveedor falla o agota su cuota |
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Testing combina dos capas. Primero ejecuta comprobaciones deterministas sobre el HTML: archivos, selectores, textos, enlaces rotos, estructura y etiquetas de formulario. Si pasan, un modelo revisa el código. Cada tarea admite hasta tres intentos.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Decisiones técnicas
 
-## Learn More
+- **Motor reanudable:** cada paso de agente es una petición corta que guarda su estado en Neon, compatible con los límites de funciones de Vercel. Un bloqueo con caducidad impide que dos pestañas ejecuten el mismo paso.
+- **Resiliencia:** los errores de cuota o disponibilidad pasan al modelo de respaldo y después se reintentan con espera.
+- **Seguridad:** las claves solo existen en variables de entorno. Lanzar agentes requiere sesión, hay un límite diario y el código generado se muestra en un iframe aislado con CSP, sin acceso a red ni a la aplicación.
+- **Accesibilidad:** interfaz orientada a WCAG 2.2 AA, con navegación por teclado, foco visible, estados anunciados a lectores de pantalla, objetivos táctiles amplios, modo oscuro y movimiento reducido.
 
-To learn more about Next.js, take a look at the following resources:
+## Stack
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Next.js 16, React 19, TypeScript, Tailwind CSS 4, AI SDK, Neon Postgres, Drizzle ORM, Vitest, Playwright y axe-core.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Puesta en marcha
 
-## Deploy on Vercel
+```bash
+pnpm install
+cp .env.example .env.local
+pnpm db:migrate
+pnpm dev
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+`AUTH_SECRET` debe tener al menos 32 caracteres. `DEMO_USER` y `DEMO_PASSWORD` definen el usuario de prueba.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Verificación
+
+```bash
+pnpm lint
+pnpm typecheck
+pnpm test
+E2E_BASE_URL=http://localhost:3000 pnpm test:e2e
+```
+
+Las pruebas end-to-end auditan WCAG 2.2 AA con axe en 320, 768 y 1440 px, en tema claro y oscuro, además del login, la protección de la API y la navegación por teclado. La auditoría automática no sustituye una revisión manual con lector de pantalla.
+
+## Uso de Claude Code
+
+La aplicación se ha programado con Claude Code bajo supervisión humana:
+
+- Definición de la arquitectura y del reparto de modelos a partir de los requisitos.
+- Implementación del motor, los agentes, la base de datos y la interfaz.
+- Diagnóstico con peticiones reales a cada proveedor para elegir modelos disponibles en sus planes gratuitos.
+- Verificación con ejecuciones reales, pruebas unitarias, pruebas end-to-end y auditoría de accesibilidad.
+
+Los commits en los que ha participado incluyen a Claude como coautor.

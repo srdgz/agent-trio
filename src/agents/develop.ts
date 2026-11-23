@@ -4,7 +4,7 @@ import { UNTRUSTED_DATA_RULE, renderWorkspace } from "./context";
 import { generateStructured } from "./model";
 
 const developSchema = z.object({
-  notes: z.string().describe("Qué has cambiado, en una o dos frases"),
+  notes: z.string().describe("Qué has cambiado, en español y en una o dos frases"),
   files: z
     .array(
       z.object({
@@ -26,6 +26,7 @@ Reglas:
 - El diseño funciona desde 320 px, con foco visible y contraste AA.
 - Los formularios no envían datos a ningún servidor: valida en cliente y muestra un mensaje accesible.
 - Si hay comentarios de Testing, corrige todos sin romper lo que ya funciona.
+- Escribe siempre en español el contenido de la web y el campo notes.
 
 ${UNTRUSTED_DATA_RULE}`;
 
